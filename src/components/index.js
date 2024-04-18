@@ -1,6 +1,6 @@
 import {initialCards} from "./cards.js";
 import {createCard, deleteCard, likeCard} from "./card.js";
-import {closeModal, openModal, overlayClose, crossButtonClose} from "./modal.js";
+import {closeModal, openModal} from "./modal.js";
 
 const placesList = document.querySelector(".places__list");
 
@@ -10,9 +10,19 @@ initialCards.forEach((cardData) => {
   placesList.append(cardElement);
 });
 
-// Закрытие попапа
-addEventListener('click', crossButtonClose); 
-addEventListener('click', overlayClose); 
+const popups = document.querySelectorAll('.popup')
+
+popups.forEach((popup) => {
+    popup.addEventListener('mousedown', (evt) => {
+        if (evt.target.classList.contains('popup_is-opened')) {
+            closeModal(popup)
+        }
+        if (evt.target.classList.contains('popup__close')) {
+            closeModal(popup)
+        }
+    })
+});
+
 
 // Редактирование профиля
 const profileForm = document.forms['edit-profile'];
@@ -40,7 +50,7 @@ function handleProfileFormSubmit(evt) {
 
     profileTitle.textContent = nameInput.value;
     profileDescription.textContent = jobInput.value;
-    closeModal(profileForm.closest('.popup'));
+    closeModal(popupEditProfile);
 }
 
 // Добавление новой карточки
@@ -65,7 +75,7 @@ function submitAddNewCard(evt) {
     }
     renderCard(placesList, createCard(card, deleteCard, likeCard, openImagePopup));
     formAddNewCard.reset();
-    closeModal(formAddNewCard.closest('.popup'));
+    closeModal(popupAddNewCard);
 }
 
 

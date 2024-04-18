@@ -22,18 +22,4 @@ function escapeListener(evt) {
     }
 }
 
-function overlayClose(evt) {
-    const target = evt.target;
-    if (target.classList.contains('popup_is-opened')) {
-        closeModal(target);
-    }
-}
-
-function crossButtonClose(evt) {
-    const target = evt.target;
-    if (target.classList.contains('popup__close')) {
-        closeModal(target.closest('.popup'));
-    }
-}
-
-export {closeModal, openModal, overlayClose, crossButtonClose};
+export {closeModal, openModal};
