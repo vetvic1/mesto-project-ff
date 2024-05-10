@@ -9,7 +9,7 @@ const placesList = document.querySelector(".places__list");
 
 function renderCards(res, ownerId) {
     res.forEach(card => {
-        placesList.append(createCard(card, ownerId, likeCard, openImagePopup, deleteCard));
+        placesList.append(createCard(card, ownerId, deleteCard, likeCard, openImagePopup));
     });
 }
 
@@ -101,14 +101,6 @@ function renderProfile(res) {
     profileImage.style.backgroundImage = `url(${res.avatar})`;
 }
 
-// Загружаем данные с сервера
-Promise.all([getUserProfile(), getInitialCards()])
-    .then(data => {
-        renderProfile(data[0]);
-        renderCards(data[1], data[0]._id);
-    })
-    .catch(error => console.log(error));
-
 // Добавление новой карточки
 const formAddNewCard = document.forms['new-place'];
 const inputNewCardName = formAddNewCard.elements['place-name'];
@@ -133,7 +125,7 @@ function submitAddNewCard(evt) {
     }
     uploadCard(card)
         .then(data => {
-            placesList.prepend(createCard(data, data.owner._id, likeCard, openImagePopup, deleteCard));
+            placesList.prepend(createCard(data, data.owner._id, deleteCard, likeCard, openImagePopup));
             closeModal(popupAddNewCard);
         })
         .catch(error => console.log(error))
@@ -157,3 +149,11 @@ function fillCardImagePopup(card) {
     popupCardImage.alt = card.name;
     popupCardCaption.textContent = card.name;
 }
+
+// Загружаем данные с сервера
+Promise.all([getUserProfile(), getInitialCards()])
+    .then(data => {
+        renderProfile(data[0]);
+        renderCards(data[1], data[0]._id);
+    })
+    .catch(error => console.log(error));

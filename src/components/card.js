@@ -17,7 +17,7 @@ function createCard(card, ownerId, deleteFunction, likeFunction, popupFunction) 
 
   // Добавляем обработчик клика для кнопки просмотра изображения
   cardImage.addEventListener('click', () => popupFunction(card));
-  console.log(popupFunction)
+  
   
   // Добавляем обработчик клика для кнопки удаления
   const buttonDelete = newCard.querySelector('.card__delete-button');
@@ -42,15 +42,16 @@ function createCard(card, ownerId, deleteFunction, likeFunction, popupFunction) 
 
 // Функция удаления карточки 
 function deleteCard (event, cardId) { 
-  const iconDelete = event.target.closest('.card');
+  const iconDelete = event.closest('.card');
   deleteCardServer(cardId);
   iconDelete.remove(); 
 }; 
 
 // Функция лайка карточки
 function likeCard (event, cardId) {
-  const likeButton = event.target.closest('.card');
-  const likes = likeButton.querySelector('.card__like-counter');
+  const likeButton = event.target.closest('.card__like-button');
+  const likeSelect = event.target.closest('.card');
+  const likes = likeSelect.querySelector('.card__like-counter');
 
     if (likeButton.classList.contains('card__like-button_is-active')) {
         deleteLike(cardId)
