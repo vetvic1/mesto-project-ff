@@ -1,15 +1,20 @@
-import {initialCards} from "./cards.js";
 import {createCard, deleteCard, likeCard} from "./card.js";
 import {closeModal, openModal} from "./modal.js";
-
-const placesList = document.querySelector(".places__list");
+import {enableValidation, clearValidation} from "./validation.js";
+import validationConfig from "./config/validationConfig";
+import {getInitialCards, getUserProfile, updateProfile, updateAvatar, uploadCard} from "./api.js";
 
 // Выводим карточки на страницу
-initialCards.forEach((cardData) => {
-  const cardElement = createCard(cardData, deleteCard, likeCard, openImagePopup);
-  placesList.append(cardElement);
-});
+const placesList = document.querySelector(".places__list");
 
+function renderCards(res, ownerId) {
+    res.forEach(card => {
+        placesList.append(createCard(card, ownerId, likeCard, openImagePopup, deleteCard));
+    });
+}
+
+enableValidation(validationConfig);
+// Закрытие попапа
 const popups = document.querySelectorAll('.popup')
 
 popups.forEach((popup) => {
@@ -23,6 +28,36 @@ popups.forEach((popup) => {
     })
 });
 
+//Изменение аватара
+const profileImage = document.querySelector('.profile__image');
+const popupUpdateAvatar = document.querySelector('.popup_type_update_avatar');
+const formUpdateAvatar = document.forms['update-avatar'];
+const inputUpdateAvatar = formUpdateAvatar.elements['link'];
+
+profileImage.addEventListener('click', () => {
+    profileImage.classList.add('clicked');
+    inputUpdateAvatar.value = '';
+    openModal(popupUpdateAvatar);
+    clearValidation(formUpdateAvatar, validationConfig);
+});
+
+profileImage.addEventListener('mouseout', () => profileImage.classList.remove('clicked'));
+
+formUpdateAvatar.addEventListener('submit', (evt) => submitUpdateAvatar(evt, inputUpdateAvatar.value));
+
+function submitUpdateAvatar(evt, avatar) {
+    evt.preventDefault();
+    evt.submitter.textContent = 'Сохранение...';
+    updateAvatar(avatar)
+        .then((data) => {
+            profileImage.style.backgroundImage = `url(${data.avatar})`;
+            closeModal(popupUpdateAvatar);
+        })
+        .catch(error => console.log(error))
+        .finally(() => {
+            evt.submitter.textContent = 'Сохранить';
+        });
+}
 
 // Редактирование профиля
 const profileForm = document.forms['edit-profile'];
@@ -36,22 +71,43 @@ const popupEditProfile = document.querySelector('.popup_type_edit');
 profileCloseButton.addEventListener('click', () => {
     fillEditProfilePopup();
     openModal(popupEditProfile);
+    clearValidation(profileForm, validationConfig);
 });
-
-profileForm.addEventListener('submit', handleProfileFormSubmit);
 
 function fillEditProfilePopup() {
   nameInput.value = profileTitle.textContent;
   jobInput.value = profileDescription.textContent;
 }
 
-function handleProfileFormSubmit(evt) {
-    evt.preventDefault();
+profileForm.addEventListener('submit', (evt) => handleProfileFormSubmit(evt, nameInput.value, jobInput.value));
 
-    profileTitle.textContent = nameInput.value;
-    profileDescription.textContent = jobInput.value;
-    closeModal(popupEditProfile);
+function handleProfileFormSubmit(evt, name, description) {
+    evt.preventDefault();
+    evt.submitter.textContent = 'Сохранение...';
+    updateProfile(name, description)
+    .then((data) => {
+        renderProfile(data);
+        closeModal(popupEditProfile);
+    })
+    .catch(error => console.log(error))
+    .finally(() => {
+        evt.submitter.textContent = 'Сохранить';
+    });    
 }
+
+function renderProfile(res) {
+    profileTitle.textContent = res.name;
+    profileDescription.textContent = res.about.replace(/[^а-яА-ЯёЁa-zA-Z \-]+/g, '');
+    profileImage.style.backgroundImage = `url(${res.avatar})`;
+}
+
+// Загружаем данные с сервера
+Promise.all([getUserProfile(), getInitialCards()])
+    .then(data => {
+        renderProfile(data[0]);
+        renderCards(data[1], data[0]._id);
+    })
+    .catch(error => console.log(error));
 
 // Добавление новой карточки
 const formAddNewCard = document.forms['new-place'];
@@ -61,6 +117,8 @@ const buttonAddNewCard = document.querySelector('.profile__add-button');
 const popupAddNewCard = document.querySelector('.popup_type_new-card');
 
 buttonAddNewCard.addEventListener('click', () => {
+  formAddNewCard.reset();
+  clearValidation(formAddNewCard, validationConfig);
   openModal(popupAddNewCard);
 });
 
@@ -68,24 +126,20 @@ formAddNewCard.addEventListener('submit', submitAddNewCard);
 
 function submitAddNewCard(evt) {
     evt.preventDefault();
-
+    evt.submitter.textContent = 'Сохранение...';
     const card = {
         name: inputNewCardName.value,
         link: inputNewCardUrl.value
     }
-    renderCard(placesList, createCard(card, deleteCard, likeCard, openImagePopup));
-    formAddNewCard.reset();
-    closeModal(popupAddNewCard);
-}
-
-
-function renderCard(parent, newElement) { 
-    const firstChild = parent.firstChild; 
-    if (firstChild) { 
-        parent.insertBefore(newElement, firstChild); 
-    } else { 
-        parent.append(newElement); 
-    } 
+    uploadCard(card)
+        .then(data => {
+            placesList.prepend(createCard(data, data.owner._id, likeCard, openImagePopup, deleteCard));
+            closeModal(popupAddNewCard);
+        })
+        .catch(error => console.log(error))
+        .finally(() => {
+            evt.submitter.textContent = 'Создать';
+        });
 } 
 
 //Отображение полноэкранной картинки
@@ -93,15 +147,13 @@ const popupCardImage = document.querySelector('.popup__image');
 const popupCardCaption = document.querySelector('.popup__caption');
 const popupCardWindow = document.querySelector('.popup_type_image');
 
-function openImagePopup(event) {
-    const target = event.target;
-    
-    fillCardImagePopup(target);
+function openImagePopup(card) {
+    fillCardImagePopup(card);
     openModal(popupCardWindow);
 }
 
-function fillCardImagePopup(target) {
-    popupCardImage['src'] = target['src'];
-    popupCardImage['alt'] = target['alt'];
-    popupCardCaption.textContent = target.closest('.card').querySelector('.card__title').textContent;
+function fillCardImagePopup(card) {
+    popupCardImage.src = card.link;
+    popupCardImage.alt = card.name;
+    popupCardCaption.textContent = card.name;
 }
